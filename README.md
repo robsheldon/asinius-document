@@ -20,7 +20,7 @@ file_put_contents('newpage.html', $html->to_html());
 * [Class Reference](#class-reference)
   * [Document](#document)
   * [HTML](#html)
-    * [HTML/Elements](#html-elements)
+    * [HTML/Elements](#htmlelements)
     * [TODOs](#todos)
   * [Markdown](#markdown)
 * [Testing](#testing)
