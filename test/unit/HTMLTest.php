@@ -28,7 +28,7 @@ final class HTMLTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        HTMLTest::$_data_dir = implode(DIRECTORY_SEPARATOR, [dirname(__FILE__, 2), 'data']);
+        HTMLTest::$_data_dir = implode(DIRECTORY_SEPARATOR, [dirname(__FILE__, 2), 'data', 'HTML']);
         foreach (HTMLTest::$_test_files as $data_file) {
             $file_path = implode(DIRECTORY_SEPARATOR, [HTMLTest::$_data_dir, $data_file]);
             if ( ! file_exists($file_path) ) {
