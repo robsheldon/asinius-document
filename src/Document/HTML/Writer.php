@@ -170,9 +170,9 @@ class Writer
     {
         if ( $this->flags & HTML::ENCODE_ENTITIES ) {
             if ( ($this->flags & HTML::MAKE_SAFE) === HTML::MAKE_SAFE ) {
-                return htmlentities(str_replace('\0', '', $text), ENT_QUOTES | ENT_DISALLOWED | ENT_HTML5, 'UTF-8', false);
+                return htmlentities(str_replace('\0', '', $text), ENT_QUOTES | ENT_DISALLOWED | ENT_HTML401, 'UTF-8', false);
             }
-            return htmlentities($text, ENT_QUOTES | ENT_DISALLOWED | ENT_HTML5, 'UTF-8', false);
+            return htmlentities($text, ENT_QUOTES | ENT_DISALLOWED | ENT_HTML401, 'UTF-8', false);
         }
         return $text;
     }

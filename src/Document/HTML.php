@@ -72,7 +72,7 @@ class HTML extends Document
     private array           $_safe_tags      = [];
     private array           $_dangerous_tags = [];
     private string          $_indent         = '    ';
-    private int             $_flags          = self::REFORMAT_HTML;
+    private int             $_flags          = self::REFORMAT_HTML | self::ENCODE_ENTITIES;
 
 
     /**
