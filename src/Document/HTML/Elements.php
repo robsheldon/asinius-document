@@ -220,7 +220,7 @@ class Elements extends ArrayIterator
      *
      * @return  Elements|null
      */
-    public function element (int $index) : ?Elements
+    public function element (int $index): ?Elements
     {
         if ( $index < parent::count() && $index >= 0 ) {
             return new Elements(parent::offsetGet($index), $this->_root_node, $this->_parent_document, $this->_options);
@@ -248,7 +248,7 @@ class Elements extends ArrayIterator
      *
      * @return  Elements
      */
-    public function append ($value, int $options = 0) : Elements
+    public function append ($value, int $options = 0): Elements
     {
         if ( is_a($value, Elements::class) ) {
             $new_elements = $value->elements();
@@ -394,7 +394,7 @@ class Elements extends ArrayIterator
             while ( $i-- ) {
                 //  For now, only add DOMElement nodes to the heap.
                 //  See also https://php.net/manual/en/class.domnode.php#domnode.props.nodetype
-                if ( ($elements[$i]->nodeType == XML_ELEMENT_NODE) || (($flags & HTML::INCLUDE_TEXT_NODES) && $elements[$i]->nodeType == XML_TEXT_NODE) ) {
+                if ( ($elements[$i]->nodeType === XML_ELEMENT_NODE) || (($flags & HTML::INCLUDE_TEXT_NODES) && $elements[$i]->nodeType === XML_TEXT_NODE) ) {
                     $child_nodes[] = $elements[$i];
                 }
             }
@@ -616,6 +616,22 @@ class Elements extends ArrayIterator
             $elements = $elements->getElementsByTagName($component['tag'] ?: '*')->filter($component);
         }
         return $elements->deduplicate();
+    }
+
+
+    /**
+     * Return these Elements as HTML.
+     *
+     * I wrote my own HTML generator here because https://bugs.php.net/bug.php?id=47137
+     * is still an open bug, properly encoding entities is tricky, and PHP has
+     * a bad habit of generating self-closing tags for empty elements (and if you
+     * try using LIBXML_NOEMPTYTAG, then tags like <br> get written as <br></br>).
+     */
+    public function to_html (array $options = [])
+    {
+        $html_writer = new Writer($options);
+        $elements    = array_map(fn($element) => $html_writer->node_to_html($element), parent::getArrayCopy());
+        return count($elements) > 1 ? $elements : $elements[0] ?? '';
     }
 
 }

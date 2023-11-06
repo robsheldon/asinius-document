@@ -306,7 +306,8 @@ final class HTMLTest extends TestCase
         $html->select('.private')->delete();
         $hidden = $html->select('.private');
         $this->assertCount(0, $hidden);
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_06.html'], $html->to_html());
+        //$this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_06.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_06.html'], $html->to_html());
     }
 
 }

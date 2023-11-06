@@ -11,9 +11,6 @@
     "require-dev": {
         "phpunit/phpunit": "^10"
     },
-    "suggest": {
-        "ext-tidy": "Tidy is suggested if you want cleaner html output: https://www.php.net/manual/en/book.tidy.php"
-    },
     "autoload": {
         "psr-4": {
             "Asinius\\": "src/"
