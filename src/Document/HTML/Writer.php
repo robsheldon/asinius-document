@@ -46,29 +46,26 @@ use DOMElement;
 class Writer
 {
 
-    //  Formatting flags used to tune the output for specific tags.
-    //  Self-closing tags: <br/>, not <br></br>.
-    private const   SELF_CLOSING_TAG       =  1;
-
-    //  Tags that are expected to have no content. Usually the same as the
-    //  self-closing tags (making them "void tags").
-    private const   NO_CONTENT             =  2;
+    //  Tags that are expected to have no content.
+    //  https://developer.mozilla.org/en-US/docs/Glossary/Void_element
+    //  For XHTML output, these tags are converted into self-closing tags.
+    private const   VOID_ELEMENT           =  1;
 
     //  If the writer is allowed to reformat the HTML, then this tag should
     //  start on a new line.
-    private const   NEWLINE_BEFORE_TAG     =  4;
+    private const   NEWLINE_BEFORE_TAG     =  2;
 
     //  If the writer is allowed to reformat the HTML, then this tag's content
     //  should start on a new line.
-    private const   NEWLINE_BEFORE_CONTENT =  8;
+    private const   NEWLINE_BEFORE_CONTENT =  4;
 
     //  If the writer is allowed to reformat the HTML, then this tag's content
     //  should end on its own line (moving the closing tag to its own line).
-    private const   NEWLINE_AFTER_CONTENT  = 16;
+    private const   NEWLINE_AFTER_CONTENT  =  8;
 
     //  If the writer is allowed to reformat the HTML, then this element's
     //  closing tag should force the next tag to the next line.
-    private const   NEWLINE_AFTER_TAG      = 32;
+    private const   NEWLINE_AFTER_TAG      = 16;
 
     //  This is an inline element. Do none of the above.
     private const   INLINE_ELEMENT         =  0;
@@ -78,21 +75,32 @@ class Writer
 
     //  A table of common elements and their formatting flags.
     private const   ELEMENTS = [
-        '*'     => self::BLOCK_ELEMENT,
-        'a'     => self::INLINE_ELEMENT,
-        'b'     => self::INLINE_ELEMENT,
-        'br'    => self::SELF_CLOSING_TAG | self::NO_CONTENT,
-        'h1'    => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'h2'    => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'h3'    => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'h4'    => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'hr'    => self::SELF_CLOSING_TAG | self::NO_CONTENT | self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'i'     => self::INLINE_ELEMENT,
-        'img'   => self::SELF_CLOSING_TAG | self::NO_CONTENT,
-        'li'    => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'p'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
-        'span'  => self::INLINE_ELEMENT,
-        'u'     => self::INLINE_ELEMENT,
+        '*'      => self::BLOCK_ELEMENT,
+        'a'      => self::INLINE_ELEMENT,
+        'area'   => self::VOID_ELEMENT,
+        'b'      => self::INLINE_ELEMENT,
+        'base'   => self::VOID_ELEMENT,
+        'br'     => self::VOID_ELEMENT,
+        'col'    => self::VOID_ELEMENT,
+        'embed'  => self::VOID_ELEMENT,
+        'h1'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'h2'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'h3'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'h4'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'hr'     => self::VOID_ELEMENT | self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'i'      => self::INLINE_ELEMENT,
+        'img'    => self::VOID_ELEMENT,
+        'input'  => self::VOID_ELEMENT,
+        'li'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'link'   => self::VOID_ELEMENT | self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'meta'   => self::VOID_ELEMENT | self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'p'      => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
+        'param'  => self::VOID_ELEMENT,
+        'source' => self::VOID_ELEMENT,
+        'span'   => self::INLINE_ELEMENT,
+        'track'  => self::VOID_ELEMENT,
+        'u'      => self::INLINE_ELEMENT,
+        'wbr'    => self::VOID_ELEMENT,
     ];
 
     //  The control options that were passed to the writer's constructor.
@@ -194,16 +202,19 @@ class Writer
             return '';
         }
         if ( ! ($this->flags & HTML::REFORMAT_HTML) ) {
-            return sprintf('<%s%s%s>%s%s', $orig_tag, $attributes, $formatting & static::SELF_CLOSING_TAG ? '/' : '', $formatting & static::NO_CONTENT ? '' : $content, $formatting & static::SELF_CLOSING_TAG ? '' : "</$orig_tag>");
+            if ( $this->flags & HTML::XHTML ) {
+                return sprintf('<%s%s%s>%s%s', $orig_tag, $attributes, $formatting & static::VOID_ELEMENT ? ' /' : '', $formatting & static::VOID_ELEMENT ? '' : $content, $formatting & static::VOID_ELEMENT ? '' : "</$orig_tag>");
+            }
+            return sprintf('<%s%s>%s%s', $orig_tag, $attributes, $formatting & static::VOID_ELEMENT ? '' : $content, $formatting & static::VOID_ELEMENT ? '' : "</$orig_tag>");
         }
-        $out = sprintf('%s<%s%s%s>', ($formatting & static::NEWLINE_BEFORE_TAG) ? $this->line_break : '', $tag, $attributes, ($formatting & static::SELF_CLOSING_TAG) ? '/' : '');
-        if ( ! ($formatting & static::NO_CONTENT) &&  (trim($content) !== '') ) {
+        $out = sprintf('%s<%s%s%s>', ($formatting & static::NEWLINE_BEFORE_TAG) ? $this->line_break : '', $tag, $attributes, (($formatting & static::VOID_ELEMENT) && ($this->flags & HTML::XHTML) ? ' /' : ''));
+        if ( ! ($formatting & static::VOID_ELEMENT) &&  (trim($content) !== '') ) {
             if ( $formatting & static::NEWLINE_BEFORE_CONTENT ) {
                 $content = $this->line_break . implode($this->line_break, array_map(fn($line) => $this->indent . $line, explode($this->line_break, $content)));
             }
             $out .= $content . (($formatting & static::NEWLINE_AFTER_CONTENT) ? $this->line_break : '');
         }
-        if ( ! ($formatting & static::SELF_CLOSING_TAG) ) {
+        if ( ! ($formatting & static::VOID_ELEMENT) ) {
             $out .= "</$tag>";
         }
         if ( $formatting & static::NEWLINE_AFTER_TAG ) {

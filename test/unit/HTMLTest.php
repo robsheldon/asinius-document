@@ -247,7 +247,7 @@ final class HTMLTest extends TestCase
         $this->assertCount(3, $paragraphs);
         $html->select('section.main p')->value('(sample paragraph text)');
         $this->assertSame(array_fill(0, 3, '(sample paragraph text)'), $html->select('section.main p')->value());
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_01.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_01.html'], $html->to_html());
     }
 
 
@@ -260,7 +260,7 @@ final class HTMLTest extends TestCase
         $this->assertSame('li', $hidden->tag());
         $this->assertSame('hidden', $hidden->classname());
         $this->assertSame(['hidden'], $hidden->classnames());
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_02.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_02.html'], $html->to_html());
     }
 
 
@@ -273,7 +273,7 @@ final class HTMLTest extends TestCase
         $this->assertSame('li', $hidden->tag());
         $this->assertSame('hidden unpublished secret', $hidden->classname());
         $this->assertSame(['hidden', 'unpublished', 'secret'], $hidden->classnames());
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_03.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_03.html'], $html->to_html());
     }
 
 
@@ -286,7 +286,7 @@ final class HTMLTest extends TestCase
         $this->assertSame('li', $hidden->tag());
         $this->assertSame('private do-not-publish unpublished secret', $hidden->classname());
         $this->assertSame(['private', 'do-not-publish', 'unpublished', 'secret'], $hidden->classnames());
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_04.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_04.html'], $html->to_html());
     }
 
 
@@ -296,7 +296,7 @@ final class HTMLTest extends TestCase
         $html->select('.private a')->set_attribute('href', '/404');
         $redirected = $html->select('.private a');
         $this->assertSame('/404', $redirected->get_attribute('href'));
-        $this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_05.html'], $html->to_html());
+        $this->assertSame(self::$_test_data['the_kitchen_sink_05.html'], $html->to_html());
     }
 
 
@@ -306,7 +306,6 @@ final class HTMLTest extends TestCase
         $html->select('.private')->delete();
         $hidden = $html->select('.private');
         $this->assertCount(0, $hidden);
-        //$this->assertXmlStringEqualsXmlString(self::$_test_data['the_kitchen_sink_06.html'], $html->to_html());
         $this->assertSame(self::$_test_data['the_kitchen_sink_06.html'], $html->to_html());
     }
 

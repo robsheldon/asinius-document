@@ -64,6 +64,7 @@ class HTML extends Document
     const   STRIP_DANGEROUS_TAGS    = 8;
     const   ALLOWED_TAGS_ONLY       = 16;
     const   ENCODE_ENTITIES         = 32;
+    const   XHTML                   = 64;
     const   MAKE_SAFE               = self::STRIP_DANGEROUS_TAGS | self::ALLOWED_TAGS_ONLY | self::ENCODE_ENTITIES;
 
 
