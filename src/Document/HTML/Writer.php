@@ -81,6 +81,7 @@ class Writer
         'b'      => self::INLINE_ELEMENT,
         'base'   => self::VOID_ELEMENT,
         'br'     => self::VOID_ELEMENT,
+        'code'   => self::INLINE_ELEMENT,
         'col'    => self::VOID_ELEMENT,
         'embed'  => self::VOID_ELEMENT,
         'h1'     => self::NEWLINE_BEFORE_TAG | self::NEWLINE_AFTER_TAG,
@@ -134,6 +135,11 @@ class Writer
         if ( ($this->flags & HTML::MAKE_SAFE) !== HTML::MAKE_SAFE ) {
             //  No special handling required.
             return implode('', array_map(function($attribute){
+                //  Sigh. Special case. PHP sets $attribute->value to "checked"
+                //  for `<input type="checkbox" checked>`.
+                if ( $attribute->ownerElement !== null && strtolower($attribute->ownerElement->tagName) === 'input' && $attribute->value === 'checked' ) {
+                    return ' ' . $attribute->name;
+                }
                 return ' ' . $attribute->name . ($attribute->value == null ? '' : '="' . $attribute->value . '"');
             }, iterator_to_array($node->attributes)));
         }
@@ -203,14 +209,49 @@ class Writer
         }
         if ( ! ($this->flags & HTML::REFORMAT_HTML) ) {
             if ( $this->flags & HTML::XHTML ) {
-                return sprintf('<%s%s%s>%s%s', $orig_tag, $attributes, $formatting & static::VOID_ELEMENT ? ' /' : '', $formatting & static::VOID_ELEMENT ? '' : $content, $formatting & static::VOID_ELEMENT ? '' : "</$orig_tag>");
+                return sprintf('<%s%s%s>%s%s',
+                    $orig_tag,
+                    $attributes,
+                    $formatting & static::VOID_ELEMENT ? ' /' : '',
+                    $formatting & static::VOID_ELEMENT ? '' : $content,
+                    $formatting & static::VOID_ELEMENT ? '' : "</$orig_tag>"
+                );
             }
             return sprintf('<%s%s>%s%s', $orig_tag, $attributes, $formatting & static::VOID_ELEMENT ? '' : $content, $formatting & static::VOID_ELEMENT ? '' : "</$orig_tag>");
         }
         $out = sprintf('%s<%s%s%s>', ($formatting & static::NEWLINE_BEFORE_TAG) ? $this->line_break : '', $tag, $attributes, (($formatting & static::VOID_ELEMENT) && ($this->flags & HTML::XHTML) ? ' /' : ''));
-        if ( ! ($formatting & static::VOID_ELEMENT) &&  (trim($content) !== '') ) {
+        if ( ! ($formatting & static::VOID_ELEMENT) && (trim($content) !== '') ) {
             if ( $formatting & static::NEWLINE_BEFORE_CONTENT ) {
-                $content = $this->line_break . implode($this->line_break, array_map(fn($line) => $this->indent . $line, explode($this->line_break, $content)));
+                if ( $tag === 'pre' ) {
+                    //  This is a tricky special case. `<pre><code>` is a kind
+                    //  of meta-tag that signals a code block in html5.
+                    //  So, look for a <code> tag and, if it exists, pull it up
+                    //  to the same line, converting it into a block tag of sorts.
+                    if ( preg_match('|^(<code[^>]*>)(.*?)(</code>)$|s', $content, $patterns) === 1 ) {
+                        $content = $patterns[1] . $this->line_break . $patterns[2] . $this->line_break . $patterns[3];
+                        $formatting ^= static::NEWLINE_AFTER_CONTENT;
+                    }
+                }
+                else {
+                    //  Indent child content.
+                    $lines = explode($this->line_break, $content);
+                    $n = count($lines);
+                    for ( $i = 0; $i < $n; $i++ ) {
+                        $lines[$i] = $this->indent . $lines[$i];
+                        if ( preg_match('/^\s*<pre(\s+[^>])*>/', $lines[$i]) === 1 ) {
+                            //  Do not indent lines inside <pre> tags.
+                            $start = $i;
+                            while ( $i < $n && preg_match('|</pre>$|', $lines[$i]) !== 1 ) {
+                                $i++;
+                            }
+                            if ( $i !== $start ) {
+                                //  But multi-line <pre> tags should have the closing tag indented.
+                                $lines[$i] = $this->indent . $lines[$i];
+                            }
+                        }
+                    }
+                    $content = $this->line_break . implode($this->line_break, $lines);
+                }
             }
             $out .= $content . (($formatting & static::NEWLINE_AFTER_CONTENT) ? $this->line_break : '');
         }
