@@ -253,6 +253,15 @@ class Writer
                     $content = $this->line_break . implode($this->line_break, $lines);
                 }
             }
+            else if ( $tag === 'li' ) {
+                //  Similar to <pre><code>, pull up nested lists into their parents.
+                //  If there's another element pair like this, I should come up
+                //  with a cleaner way of handling this.
+                if ( preg_match('|^\s*(<[ou]l[^>]*>)(.*?)(</[ou]l>)\s*$|s', $content, $patterns) === 1 ) {
+                    $content = $patterns[1] . $this->line_break . $patterns[2] . $this->line_break . $patterns[3];
+                    $formatting &= ~static::NEWLINE_AFTER_CONTENT;
+                }
+            }
             $out .= $content . (($formatting & static::NEWLINE_AFTER_CONTENT) ? $this->line_break : '');
         }
         if ( ! ($formatting & static::VOID_ELEMENT) ) {
