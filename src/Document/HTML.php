@@ -58,7 +58,6 @@ libxml_use_internal_errors(true);
 class HTML extends Document
 {
 
-    const   UNSAFE_HTML             = 1;
     const   INCLUDE_TEXT_NODES      = 2;
     const   REFORMAT_HTML           = 4;
     const   STRIP_DANGEROUS_TAGS    = 8;
@@ -199,7 +198,7 @@ class HTML extends Document
                 $this->_dangerous_tags = ['script', 'style'];
             }
             if ( ($this->_flags & static::ALLOWED_TAGS_ONLY) && empty($this->_safe_tags) ) {
-                $this->_safe_tags = ['h1', 'h2', 'h3', 'h4', 'p', 'a', 'i', 'u', 'b', 'ul', 'ol', 'li'];
+                $this->_safe_tags = ['a', 'b', 'code', 'h1', 'h2', 'h3', 'h4', 'i', 'li', 'ol', 'p', 'pre', 'u', 'ul'];
             }
         }
         if ( isset($options['dangerous_tags']) ) {
@@ -217,25 +216,6 @@ class HTML extends Document
     public function to_html (?array $options = null): string
     {
         return (new Writer(['flags' => $this->_flags, 'dangerous_tags' => $this->_dangerous_tags, 'allowed_tags' => $this->_safe_tags, 'indent' => $this->_indent]))->node_to_html($this->_document);
-        /*
-        //  Sigh. It appears https://bugs.php.net/bug.php?id=47137 was never fixed.
-        //  The next few lines work around this. See https://www.php.net/manual/en/libxml.constants.php#128713
-        $html = new DOMDocument('1.0', 'UTF-8');
-        $html->formatOutput        = true;
-        $html->preserveWhiteSpace  = false;
-        $html->strictErrorChecking = false;
-        $html->loadXML($this->_document->saveXML());
-        $html->normalizeDocument();
-        $html = $html->saveXML($html->firstElementChild);
-        //  Siiiiigh. This ALMOST works, but no. There's no built-in way to fix empty <head></head> tags without
-        //  also breaking <br/> tags.
-        //  https://www.php.net/manual/en/class.domdocument.php#104218 gives a good answer here. Can probably
-        //  implement this with a push/pop stack instead of recursively calling back into a temporary function.
-        //  Just use getElementsByTagName along with a list of tags, and set each tag's nodeValue to '' if it
-        //  has no children. Easy peasy done.
-        //  TODO
-        return $html;
-        */
     }
 
 }
