@@ -41,6 +41,9 @@ use ArrayIterator;
 use RuntimeException;
 
 
+/**
+ * @property string readonly    $childCount
+ */
 class Elements extends ArrayIterator
 {
 
@@ -94,6 +97,24 @@ class Elements extends ArrayIterator
         $this->_parent_document = $parent_document;
         $this->_options         = $options;
         parent::__construct($elements);
+    }
+
+
+    /**
+     * Handler for some read-only properties.
+     *
+     * @param   string              $property
+     *
+     * @return  mixed
+     */
+    public function __get (string $property)
+    {
+        switch ($property) {
+            case 'childCount':
+                $counts = array_map(fn($element) => count($element->childNodes), parent::getArrayCopy());
+                return count($counts) > 1 ? $counts : $counts[0] ?? null;
+        }
+        throw new RuntimeException();
     }
 
 
@@ -189,7 +210,7 @@ class Elements extends ArrayIterator
         foreach ($elements as $element) {
             $document->appendChild($document->importNode($element, true));
         }
-        return (new HTML($document))->to_html($this->_options);
+        return (new HTML($document))->to_html(['flags' => $this->_options]);
     }
 
 
@@ -241,44 +262,51 @@ class Elements extends ArrayIterator
 
 
     /**
-     * Append some new content to each element in the collection.
+     * Append one or more Elements to each element in the collection.
      *
-     * @param   mixed       $value
-     * @param   int         $options
+     * @param   Elements    $value
      *
      * @return  Elements
      */
-    public function append ($value, int $options = 0): Elements
+    public function append ($value): Elements
     {
-        if ( is_a($value, Elements::class) ) {
-            $new_elements = $value->elements();
-            $i = count($new_elements);
-            while ( $i-- ) {
-                $new_elements[$i] = $this->_parent_document->importNode($new_elements[$i], true);
-            }
+        if ( ! is_a($value, Elements::class) ) {
+            throw new RuntimeException(sprintf("Can't append this type of value: %s", gettype($value)), EINVAL);
         }
-        else if ( is_string($value) ) {
-            if ( $options & HTML::UNSAFE_HTML ) {
-                //  Treat as html.
-                $new_code = new DOMDocument();
-                $new_code->loadHTML($value);
-                if ( $new_code->documentElement === null ) {
-                    throw new RuntimeException('Failed to load HTML content', EINVAL);
-                }
-                $new_elements = iterator_to_array($new_code->documentElement->firstChild->childNodes);
-                $i = count($new_elements);
-                while ( $i-- ) {
-                    //  Each node (and its children) needs to be imported into
-                    //  the current document before it can be cloned below.
-                    $new_elements[$i] = $this->_parent_document->importNode($new_elements[$i], true);
-                }
-            }
-            else {
-                $new_elements = [$this->_parent_document->createTextNode($value)];
-            }
+        $new_elements = $value->elements();
+        $i = count($new_elements);
+        while ( $i-- ) {
+            $new_elements[$i] = $this->_parent_document->importNode($new_elements[$i], true);
         }
-        else {
-            throw new RuntimeException('Unhandled parameter type: ' . gettype($value), EINVAL);
+        foreach ($new_elements as $new_element) {
+            $this->_for_all_do(function($element, $new_element){
+                $element->appendChild($new_element->cloneNode(true));
+            }, $new_element);
+        }
+        return $this;
+    }
+
+
+    /**
+     * Append a block of HTML to each element in the collection.
+     *
+     * @param   string      $html
+     *
+     * @return  Elements
+     */
+    public function append_html (string $html): Elements
+    {
+        $new_code = new DOMDocument();
+        $new_code->loadHTML($html);
+        if ( $new_code->documentElement === null ) {
+            throw new RuntimeException('Failed to load HTML content', EINVAL);
+        }
+        $new_elements = iterator_to_array($new_code->documentElement->firstChild->childNodes);
+        $i = count($new_elements);
+        while ( $i-- ) {
+            //  Each node (and its children) needs to be imported into
+            //  the current document before it can be cloned below.
+            $new_elements[$i] = $this->_parent_document->importNode($new_elements[$i], true);
         }
         foreach ($new_elements as $new_element) {
             $this->_for_all_do(function($element, $new_element){
