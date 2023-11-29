@@ -70,10 +70,10 @@ class Markdown extends Document
 
     //  Regular expressions for handling inline styles and elements like embedded links.
     private const   STYLE_PATTERNS = [
-        '/\*{3}(.+)\*{3}/'                                        => '<b><i>$1</i></b>',
-        '/(?<!\*|\w)\*{2}([^*\s]([^*]*[^*\s])?)\*{2}(?!\*|\w)/'   => '<b>$1</b>',
-        '/(?<!\*|\w)([*_])([^*\s]([^*]*[^*\s])?)\1(?!\*|\w)/'     => '<i>$2</i>',
-        '/(?<!\w)\[([^\[\]]+)\]\(([^()]+)\)(?!\w)/'               => '<a href="$2">$1</a>',
+        '/\*{3}(.+)\*{3}/'                                              => '<b><i>$1</i></b>',
+        '/(?<!\*|\w)\*{2}([^*\s]([^*]*[^*\s])?)\*{2}(?!\*|\w)/'         => '<b>$1</b>',
+        '/(?<!\*|\w)([*_])([^*\s]([^*]*[^*\s])?)\1(?!\*|\w)/'           => '<i>$2</i>',
+        '/(?<!\w)\[([^\[\]]+)\]\(([a-zA-Z0-9&%$?#@.=:\/_-]+)\)(?!\w)/'  => '<a href="$2">$1</a>',
     ];
 
     //  Detecting various types of lists.
@@ -130,9 +130,14 @@ class Markdown extends Document
         $content = preg_replace_callback('/(?<!`|\w)`(\s*)([^`]+?)(\s*)`(?!`|\w)/', function ($inline_code) {
             return '<code>' . str_replace(' ', '&nbsp;', $inline_code[1]) . htmlentities($inline_code[2], ENT_QUOTES | ENT_DISALLOWED | ENT_HTML401, 'UTF-8', false) . str_replace(' ', '&nbsp;', $inline_code[3]) . '</code>';
         }, $content);
-        //  Search for and render any links.
-        return preg_replace_callback('/\[([^\[\]"]+)\]\(([a-zA-Z0-9&%$?#@.=:\/_-]+)\)/', function ($link) {
-            return sprintf('<a href="%s">%s</a>', $link[2], $link[1]);
+        //  Search for and render any internal links.
+        return preg_replace_callback('/\[\[\s*([^\[\]]+)\s*\]\]/', function ($link) {
+            $link_text = trim($link[1]);
+            $link = implode(DIRECTORY_SEPARATOR, array_map('rawurlencode', explode(DIRECTORY_SEPARATOR, $link_text)));
+            if ( preg_match(sprintf('|^%s|', DIRECTORY_SEPARATOR), $link) !== 1 ) {
+                $link = sprintf('.%s%s', DIRECTORY_SEPARATOR, $link);
+            }
+            return sprintf('<a href="%s">%s</a>', $link, $link_text);
         }, $content);
     }
 
