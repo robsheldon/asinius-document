@@ -21,3 +21,5 @@ Italicize *multiple words in a sentence!*...without messing with other formattin
 How about `inline code blocks?`
 
 Inline code blocks ` should preserve <formatting> `.
+
+Don't forget [external links](https://foo.com) too.

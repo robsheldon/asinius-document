@@ -68,11 +68,12 @@ class Markdown extends Document
         self::BLOCKQUOTE      => '/^\s*>\s*(?P<quoted>.*)/',
     ];
 
-    //  Regular expressions for handling inline styles.
+    //  Regular expressions for handling inline styles and elements like embedded links.
     private const   STYLE_PATTERNS = [
         '/\*{3}(.+)\*{3}/'                                        => '<b><i>$1</i></b>',
         '/(?<!\*|\w)\*{2}([^*\s]([^*]*[^*\s])?)\*{2}(?!\*|\w)/'   => '<b>$1</b>',
         '/(?<!\*|\w)([*_])([^*\s]([^*]*[^*\s])?)\1(?!\*|\w)/'     => '<i>$2</i>',
+        '/(?<!\w)\[([^\[\]]+)\]\(([^()]+)\)(?!\w)/'               => '<a href="$2">$1</a>',
     ];
 
     //  Detecting various types of lists.
