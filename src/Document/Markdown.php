@@ -55,13 +55,14 @@ class Markdown extends Document
     private const   LIST_ORDERED_ALPHA_UPPER =  96;
     private const   LIST_CHECKLIST           =  97;
     private const   LIST_UNORDERED           =  99;
+    private const   BLOCKQUOTE               = 100;
 
     private const   BLOCK_ELEMENTS = [
         self::HEADING         => '/^#{1,6}\s/',
         self::HORIZONTAL_RULE => '/^---\s*$/',
         self::CODE_BLOCK      => '/^```(?P<language>[a-zA-Z0-9-]*)$/',
         self::LIST            => '/^(?P<indent>\s*)(?P<list_symbol>[*+]|[a-zA-Z]+\.|[0-9]+\.|\[[xX ]?\])\s+(?P<list_item>.+)$/',
-        //self::BLOCKQUOTE      => '',
+        self::BLOCKQUOTE      => '/^\s*>\s*(?P<quoted>.*)/',
     ];
 
     private const   STYLE_PATTERNS = [
@@ -277,6 +278,10 @@ class Markdown extends Document
                         break;
                     }
                     $body->append_html($this->_generate_list($list_lines));
+                    break;
+                case self::BLOCKQUOTE:
+                    $quoted_lines = array_column(array_merge([$captured], $this->_readwhile($lines, static::BLOCK_ELEMENTS[static::BLOCKQUOTE], true, true)), 'quoted');
+                    $body->append_html(sprintf('<blockquote>%s</blockquote>', implode("\n", $quoted_lines)));
                     break;
             }
         }
