@@ -43,6 +43,7 @@ use Asinius\Document;
 class Markdown extends Document
 {
 
+    //  Just constants used for labeling blocks of logic in the writer.
     private const   PARAGRAPH                =   0;
     private const   HEADING                  =  60;
     private const   HORIZONTAL_RULE          =  70;
@@ -57,6 +58,8 @@ class Markdown extends Document
     private const   LIST_UNORDERED           =  99;
     private const   BLOCKQUOTE               = 100;
 
+    //  Regular expressions used for matching block-level elements (and capturing
+    //  their content or other attributes).
     private const   BLOCK_ELEMENTS = [
         self::HEADING         => '/^#{1,6}\s/',
         self::HORIZONTAL_RULE => '/^---\s*$/',
@@ -65,12 +68,14 @@ class Markdown extends Document
         self::BLOCKQUOTE      => '/^\s*>\s*(?P<quoted>.*)/',
     ];
 
+    //  Regular expressions for handling inline styles.
     private const   STYLE_PATTERNS = [
         '/\*{3}(.+)\*{3}/'                                        => '<b><i>$1</i></b>',
         '/(?<!\*|\w)\*{2}([^*\s]([^*]*[^*\s])?)\*{2}(?!\*|\w)/'   => '<b>$1</b>',
         '/(?<!\*|\w)([*_])([^*\s]([^*]*[^*\s])?)\1(?!\*|\w)/'     => '<i>$2</i>',
     ];
 
+    //  Detecting various types of lists.
     private const   LIST_TYPE_PATTERNS = [
         self::LIST_ORDERED_NUMERIC     => '/^([0-9]+)\.$/',
         self::LIST_ORDERED_ROMAN_LOWER => '/^([ivxcm]+)\.$/',
@@ -88,10 +93,10 @@ class Markdown extends Document
      * Read lines from $lines while they match a given pattern and return them.
      * Optionally, read the lines while they do not match a given pattern.
      *
-     * @param  array    $lines
-     * @param  string   $pattern
-     * @param  bool     $match_pattern
-     * @param  bool     $capture
+     * @param  array        $lines
+     * @param  string       $pattern
+     * @param  bool         $match_pattern
+     * @param  bool         $capture
      *
      * @return array
      */
@@ -109,6 +114,13 @@ class Markdown extends Document
     }
 
 
+    /**
+     * Convert inline styles within a block of text to HTML equivalent tags.
+     *
+     * @param  string       $content
+     *
+     * @return string
+     */
     private function _convert_styled_text (string $content): string
     {
         //  Translate simple inline markup.
@@ -124,6 +136,13 @@ class Markdown extends Document
     }
 
 
+    /**
+     * Process an array of lines intended to be list elements.
+     *
+     * @param  array        $lines
+     *
+     * @return string
+     */
     private function _generate_list (array &$lines): string
     {
         if ( count($lines) < 1 ) {
@@ -196,6 +215,13 @@ class Markdown extends Document
     }
 
 
+    /**
+     * Return a new Markdown object from some data (currently, a string).
+     *
+     * @TODO  Add support for Datastreams and the like.
+     *
+     * @param  $data
+     */
     public function __construct ($data)
     {
         parent::__construct(trim($data));
@@ -205,12 +231,22 @@ class Markdown extends Document
     }
 
 
+    /**
+     * Return the current MIME type for this document.
+     *
+     * @return string
+     */
     public function mime_type (): string
     {
         return 'text/markdown';
     }
 
 
+    /**
+     * Convert this document into HTML and return it.
+     *
+     * @return string
+     */
     public function to_html(): string
     {
         $this->_html = new HTML('<html><head></head><body></body></html>');
