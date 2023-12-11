@@ -57,6 +57,7 @@ class Markdown extends Document
     private const   LIST_CHECKLIST           =  97;
     private const   LIST_UNORDERED           =  99;
     private const   BLOCKQUOTE               = 100;
+    private const   EMBEDDED                 = 110;
 
     //  Regular expressions used for matching block-level elements (and capturing
     //  their content or other attributes).
@@ -66,6 +67,7 @@ class Markdown extends Document
         self::CODE_BLOCK      => '/^```(?P<language>[a-zA-Z0-9-]*)$/',
         self::LIST            => '/^(?P<indent>\s*)(?P<list_symbol>[*+]|[a-zA-Z]+\.|[0-9]+\.|\[[xX ]?\])\s+(?P<list_item>.+)$/',
         self::BLOCKQUOTE      => '/^\s*>\s*(?P<quoted>.*)/',
+        self::EMBEDDED        => '/^\s*!\[\[(?P<embedded>[^\[\]]+)\]\]\s*$/',
     ];
 
     //  Regular expressions for handling inline styles and elements like embedded links.
@@ -74,6 +76,12 @@ class Markdown extends Document
         '/(?<!\*|\w)\*{2}([^*\s]([^*]*[^*\s])?)\*{2}(?!\*|\w)/'         => '<b>$1</b>',
         '/(?<!\*|\w)([*_])([^*\s]([^*]*[^*\s])?)\1(?!\*|\w)/'           => '<i>$2</i>',
         '/(?<!\w)\[([^\[\]]+)\]\(([a-zA-Z0-9&%$?#@.=:\/_-]+)\)(?!\w)/'  => '<a href="$2">$1</a>',
+    ];
+
+    //  Regular expressions for translating some common character combinations
+    //  into html entities.
+    private const   ENTITIES = [
+        '/(?<!\.)\.{3}(?!\.)/'                                          => '&hellip;',
     ];
 
     //  Detecting various types of lists.
@@ -115,6 +123,16 @@ class Markdown extends Document
     }
 
 
+    private function _render_link (string $link): string
+    {
+        $link = implode(DIRECTORY_SEPARATOR, array_map('rawurlencode', explode(DIRECTORY_SEPARATOR, $link)));
+        if ( preg_match(sprintf('|^%s|', DIRECTORY_SEPARATOR), $link) !== 1 ) {
+            $link = sprintf('.%s%s', DIRECTORY_SEPARATOR, $link);
+        }
+        return $link;
+    }
+
+
     /**
      * Convert inline styles within a block of text to HTML equivalent tags.
      *
@@ -130,14 +148,12 @@ class Markdown extends Document
         $content = preg_replace_callback('/(?<!`|\w)`(\s*)([^`]+?)(\s*)`(?!`|\w)/', function ($inline_code) {
             return '<code>' . str_replace(' ', '&nbsp;', $inline_code[1]) . htmlentities($inline_code[2], ENT_QUOTES | ENT_DISALLOWED | ENT_HTML401, 'UTF-8', false) . str_replace(' ', '&nbsp;', $inline_code[3]) . '</code>';
         }, $content);
+        //  Generate entities for some common characters.
+        $content = preg_replace(array_keys(static::ENTITIES), static::ENTITIES, $content);
         //  Search for and render any internal links.
         return preg_replace_callback('/\[\[\s*([^\[\]]+)\s*\]\]/', function ($link) {
-            $link_text = trim($link[1]);
-            $link = implode(DIRECTORY_SEPARATOR, array_map('rawurlencode', explode(DIRECTORY_SEPARATOR, $link_text)));
-            if ( preg_match(sprintf('|^%s|', DIRECTORY_SEPARATOR), $link) !== 1 ) {
-                $link = sprintf('.%s%s', DIRECTORY_SEPARATOR, $link);
-            }
-            return sprintf('<a href="%s">%s</a>', $link, $link_text);
+            $link = trim($link[1]);
+            return sprintf('<a href="%s">%s</a>', $this->_render_link($link), $link);
         }, $content);
     }
 
@@ -156,31 +172,27 @@ class Markdown extends Document
         }
         //  Initialize the list according to the first element.
         $indent = strlen($lines[0]['indent'] ?? '');
-        $tag = 'ul';
+        $tag = 'ol';
         $type_attribute = '';
         foreach (static::LIST_TYPE_PATTERNS as $list_type => $pattern) {
             if ( preg_match($pattern, $lines[0]['list_symbol']) === 1 ) {
                 switch ( $list_type ) {
-                    case static::LIST_CHECKLIST:
-                        break 2;
                     case static::LIST_ORDERED_NUMERIC:
-                        $tag = 'ol';
                         break 2;
                     case static::LIST_ORDERED_ROMAN_LOWER:
-                        $tag = 'ol';
                         $type_attribute = ' type="i"';
                         break 2;
                     case static::LIST_ORDERED_ROMAN_UPPER:
-                        $tag = 'ol';
                         $type_attribute = ' type="I"';
                         break 2;
                     case static::LIST_ORDERED_ALPHA_LOWER:
-                        $tag = 'ol';
                         $type_attribute = ' type="a"';
                         break 2;
                     case static::LIST_ORDERED_ALPHA_UPPER:
-                        $tag = 'ol';
                         $type_attribute = ' type="A"';
+                        break 2;
+                    default:
+                        $tag = 'ul';
                         break 2;
                 }
             }
@@ -218,6 +230,23 @@ class Markdown extends Document
             }
         }
         return sprintf('<%s%s>%s</%s>', $tag, $type_attribute, implode('', $line_items), $tag);
+    }
+
+
+    /**
+     * Embed objects: usually images, but more advanced support for other media
+     * will be incrementally added later.
+     *
+     * @param  string       $link
+     *
+     * @return string
+     */
+    private function _embed (string $link): string
+    {
+        if ( preg_match('/\.(jpe?g|png|webp|gif)$/i', $link) === 1 ) {
+            return sprintf('<p><img src="%s"></p>', $this->_render_link($link));
+        }
+        return $link;
     }
 
 
@@ -324,6 +353,9 @@ class Markdown extends Document
                 case self::BLOCKQUOTE:
                     $quoted_lines = array_column(array_merge([$captured], $this->_readwhile($lines, static::BLOCK_ELEMENTS[static::BLOCKQUOTE], true, true)), 'quoted');
                     $body->append_html(sprintf('<blockquote>%s</blockquote>', implode("\n", $quoted_lines)));
+                    break;
+                case self::EMBEDDED:
+                    $body->append_html($this->_embed(trim($captured['embedded'])));
                     break;
             }
         }

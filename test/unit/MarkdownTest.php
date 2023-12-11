@@ -26,6 +26,8 @@ final class MarkdownTest extends TestCase
         '08_lists.html',
         '09_blockquote.md',
         '09_blockquote.html',
+        '10_images.md',
+        '10_images.html',
     ];
     private static array  $_test_data  = [];
 
@@ -104,6 +106,11 @@ final class MarkdownTest extends TestCase
     public function test_blockquotes (): void
     {
         $this->assertSame(self::$_test_data['09_blockquote.html'], (new Markdown(self::$_test_data['09_blockquote.md']))->to_html());
+    }
+
+    public function test_images (): void
+    {
+        $this->assertSame(self::$_test_data['10_images.html'], (new Markdown(self::$_test_data['10_images.md']))->to_html());
     }
 
 }
